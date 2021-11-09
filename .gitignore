@@ -1,0 +1,8 @@
+#ignore files
+01_input/*
+03_GIS/*
+*.RData
+*.Rhistory
+
+
+.Rproj.user
