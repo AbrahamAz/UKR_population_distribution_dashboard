@@ -6,3 +6,10 @@
 
 
 .Rproj.user
+
+
+!/01_input/01_world_pop/.gitkeep
+!/01_input/02_shapefile/.gitkeep
+!/01_input/03_admin_boundary_with_pop/.gitkeep
+!/01_input/04_admin_boundary_without_pop/.gitkeep
+!/01_input/05_cluster/.gitkeep
