@@ -1,5 +1,9 @@
 #ignore files
-01_input/*
+01_input/01_world_pop/*
+01_input/02_shapefile/*
+01_input/03_admin_boundary_with_pop/*
+01_input/04_admin_boundary_without_pop/*
+01_input/05_cluster/*
 03_GIS/*
 *.RData
 *.Rhistory
