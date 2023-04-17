@@ -20,34 +20,53 @@ library(stringr)
 library(htmltools)
 
 
+
 # read_data ---------------------------------------------------------------
 
 
-admin_zero <-st_read("01_input/04_admin_boundary_without_pop/irq_admbnda_adm0_cso_itos_20190603.shp")
-cluster_sf <- st_read("01_input/05_cluster/irq_one_km_hex.shp") %>% 
-  rename(zone_sts=drft_s_,
-         population=pop)
+admin_zero <-st_read("01_input/04_admin_boundary_without_pop/ukr_admbnda_adm0_sspe_20230201.shp")
+cluster_sf <- st_read("01_input/05_cluster/UKR_hex1km2_pop_osm.shp")%>% 
+  rename(population=SUM_round) %>% 
+  mutate(zone_sts="OK") 
 
 
 
-admin1_boundary <- st_read("01_input/03_admin_boundary_with_pop/admin1.shp")
-admin2_boundary <- st_read("01_input/03_admin_boundary_with_pop/admin2.shp")
-admin3_boundary <- st_read("01_input/03_admin_boundary_with_pop/admin3.shp")
+admin1_boundary <- st_read("01_input/03_admin_boundary_with_pop/UKR_ADM1_pop2020_eng.shp")
+admin2_boundary <- st_read("01_input/03_admin_boundary_with_pop/UKR_ADM2_pop2020_eng.shp")
+admin3_boundary <- st_read("01_input/03_admin_boundary_with_pop/UKR_ADM3_pop2020_eng.shp")
 
+conflict_area <- st_read("01_input/02_shapefile/liveuamap_23022023.shp")
 
+conflict <- st_zm(conflict_area, drop = T, what = "ZM")
 
 # leaflet_map -------------------------------------------------------------
 
 base_map <- leaflet::leaflet() %>% leaflet::addProviderTiles(providers$CartoDB.Positron) %>% 
   leaflet::addPolygons(data = admin_zero,color = "#EE5859",fillColor = "transparent") %>% 
-leaflet::addPolygons(data = admin1_boundary,color = "#58585A",
+  leaflet::addPolygons(data = admin1_boundary,color = "#58585A",
                      # label = ~htmlEscape(ADM1_EN),
                      # labelOptions = labelOptions(noHide = T, textOnly = TRUE,textsize = "15px"),
                      popup = paste("Governorate:", admin1_boundary$ADM1_EN, "<br>",
-                                   "Total population:", admin1_boundary$pop_all),
-                     weight = 2,dashArray = "12",fillColor = "transparent")
+                                   "Total population:", admin1_boundary$SUM_round),
+                     weight = 2,dashArray = "12",fillColor = "transparent") %>% 
+  leaflet::addPolylines(data = conflict,
+                       color = "#111111",
+                       # label = ~htmlEscape(Label),
+                       # labelOptions = labelOptions(noHide = T,
+                       #                             direction = 'center',
+                       #                             textOnly = T,
+                       #                             style = list(
+                       #                               "font-family" = "Arial Narrow",
+                       #                               "font-size" = "10px",
+                       #                               "font-style" = "italic")),
+                       # popup = paste("Occupied Areas: ",conflict_area$Name),
+                       weight = 3,dashArray = "9",
+                       fillColor = "#990000"
+  )
+  
 
 
+base_map
 
 customized_cluster <- cluster_sf %>% filter(zone_sts != "NOT_OK")
 
@@ -55,13 +74,13 @@ customized_cluster <- cluster_sf %>% filter(zone_sts != "NOT_OK")
 
 # read population raster --------------------------------------------------
 
-worldpop <- raster("01_input/01_world_pop/irq_ppp_2020_UNadj_constrained.tif") # %>% projectRaster(crs = crs(admin_zero))
+worldpop <- raster("01_input/01_world_pop/ukr_ppp_2020.tif") # %>% projectRaster(crs = crs(admin_zero))
 
 
 base_map_for_pop <- leaflet::leaflet() %>% 
   leaflet::addProviderTiles(providers$CartoDB.PositronNoLabels) %>% 
   leaflet::addPolygons(data = admin_zero,color = "#EE5859",fillColor = "transparent") %>%  
-  # leaflet::addRasterImage(worldpop) %>% 
+  # leaflet::addRasterImage(worldpop) %>%
   leaflet::addPolygons(data = admin1_boundary,color = "#D2CBB8",
                        label = ~htmlEscape(ADM1_EN),
                        labelOptions = labelOptions(noHide = T,
@@ -73,9 +92,9 @@ base_map_for_pop <- leaflet::leaflet() %>%
                                                      "font-weight" =  "bold"
                                                    )),
                        popup = paste("Governorate:", admin1_boundary$ADM1_EN, "<br>",
-                                     "Total population:", admin1_boundary$pop_all),
-                       weight = 3,fillColor = "transparent") %>% 
-  
+                                     "Total population:", admin1_boundary$SUM_round),
+                       weight = 3,fillColor = "transparent") %>%
+
   leaflet::addPolygons(data = admin2_boundary,
                        color = "#58585A",
                        label = ~htmlEscape(ADM2_EN),
@@ -86,13 +105,13 @@ base_map_for_pop <- leaflet::leaflet() %>%
                                                      "font-family" = "serif",
                                                      "font-size" = "12px"
                                                    )),
-                       
+
                        popup = paste("Governorate:", admin2_boundary$ADM1_EN, "<br>",
                                      "District:", admin2_boundary$ADM2_EN, "<br>",
-                                     "Total population:", admin2_boundary$pop_all),
-                       
-                       weight = 1,fillColor = "transparent",group = "District") %>% 
-  
+                                     "Total population:", admin2_boundary$SUM_round),
+
+                       weight = 1,fillColor = "transparent",group = "District") %>%
+
   leaflet::addPolygons(data = admin3_boundary,
                        color = "#F69E61",
                        label = ~htmlEscape(ADM3_EN),
@@ -107,18 +126,28 @@ base_map_for_pop <- leaflet::leaflet() %>%
                        popup = paste("Governorate:", admin3_boundary$ADM1_EN, "<br>",
                                      "District:", admin3_boundary$ADM2_EN, "<br>",
                                      "Sub-District:", admin3_boundary$ADM3_EN, "<br>",
-                                     "Total population:", admin3_boundary$pop_all),
-                       
+                                     "Total population:", admin3_boundary$SUM_round),
+
                        weight = 1,dashArray = "9",
                        fillColor = "transparent",
-                       group = "Sub-district") %>% 
-  
+                       group = "Sub-district") %>%
+  leaflet::addPolylines(data = conflict,
+                        color = "#990000",
+                        # label = ~htmlEscape(Label),
+                        # labelOptions = labelOptions(noHide = T,
+                        #                             direction = 'center',
+                        #                             textOnly = T,
+                        #                             style = list(
+                        #                               "font-family" = "Arial Narrow",
+                        #                               "font-style" = "italic")),
+                        weight = 3,dashArray = "9",
+                        fillColor = "transparent") %>%
   addLayersControl(
     overlayGroups = c("District", "Sub-district"),
     options = layersControlOptions(collapsed = FALSE)) %>% 
   # hideGroup(c("Sub-district")) %>% 
-  groupOptions("District", zoomLevels = 9:13) %>% 
-  groupOptions("Sub-district", zoomLevels = 10:20) %>% 
+  groupOptions("District", zoomLevels = 9:13) %>%
+  groupOptions("Sub-district", zoomLevels = 10:20) %>%
   
   addDrawToolbar(position = "topleft",
                  polylineOptions = F,
@@ -126,10 +155,10 @@ base_map_for_pop <- leaflet::leaflet() %>%
                  rectangleOptions = T,
                  markerOptions = F,circleOptions = F,
                  circleMarkerOptions = F,singleFeature = T
-                ) %>% setView(lat = 33.312805,lng = 44.361488,zoom = 7) 
+                ) %>% setView(lat = 48.312805,lng = 33.361488,zoom = 6) 
 
 
-
+# base_map_for_pop
 # ui ---------------------------------------------------------------------
 
 ui <- 
@@ -144,8 +173,8 @@ ui <-
     
     navbarPage(
       
-      windowTitle = "IRAQ POPULATION DISTRIBUTION",
-      HTML('<a style="padding-left:10px;" class = "navbar-brand" href = "https://www.reach-initiative.org" target="_blank"><img src = "reach_logo.png" height = "50"></a><span class="navbar-text" style="font-size: 16px; color: #FFFFFF"><strong>IRAQ POPULATION DISTRIBUTION</strong></span>'),
+      windowTitle = "UKRAINE POPULATION DISTRIBUTION",
+      HTML('<a style="padding-left:10px;" class = "navbar-brand" href = "https://www.reach-initiative.org" target="_blank"><img src = "reach_logo.png" height = "50"></a><span class="navbar-text" style="font-size: 16px; color: #FFFFFF"><strong>UKRAINE POPULATION DISTRIBUTION</strong></span>'),
       
       
       tabPanel("Populated Area",
@@ -154,13 +183,13 @@ ui <-
                column( width =3,
                        br(),
                        h4(strong("Background:"),tags$br(),
-                          p(style="text-align: justify;","This app has been created to smoothen the host community sampling process all over the IRAQ. WolrdPop population data has been used to identify the populated area over Iraq. Note that WorldPop used remote sensing techniques to find the population distribution. Hence the population figure and their distribution may not be error-free. The detailed methodology they have followed can be found",em(tags$a(href="https://www.worldpop.org/geodata/summary?id=49994", "here")),"."
+                          p(style="text-align: justify;","This app has been created to smoothen the host community sampling process all over Ukraine. WolrdPop population data has been used to identify the populated area over Ukraine. Note that WorldPop used remote sensing techniques to find the population distribution. Hence the population figure and their distribution may not be error-free. The detailed methodology they have followed can be found",em(tags$a(href="https://www.worldpop.org/geodata/summary?id=49994", "here")),"."
                           )),
                        
                        hr(),
                        
                        h4(strong("Methodology:"),tags$br(),
-                          p(style="text-align: justify;", "Initially, the whole Iraq was divided into hexagons, where each hexagon covers an area of one square kilometer. Then the non-livable areas such as governmental building, airports, schools, college, waterbody, etc.. were erased from the hexagons. OSM data was used to identify non-livable areas. After that, the population for each hexagon was calculated by using the population dataset (as raster) published by WorldPop. The detailed R script is available on request."
+                          p(style="text-align: justify;", "The project was developed for Ukraine, divided into hexagons covering an area of one square kilometer for the whole country. Then the non-livable areas were classified by using OSM data, based on the location of governmental buildings, airports, schools, colleges, waterbodies, forests, and other relevant geospatial information. After that, for each hexagon, were calculated the coverage of non-livable areas in percentage and the number of population, by using the raster dataset of population published by WorldPop (2020). Hexagons where the number of population was less than 50, or where the coverage of non-livable area was greater than or equal to 90% added to the number of population between 50 and 100 were disregarded. The detailed R script is available on request."
                           )),
                        
                        hr(),
@@ -174,7 +203,7 @@ ui <-
                        p(tags$ol(
                          tags$li(em("Calculate population by Sub-districts")), 
                          tags$li(em("Calculate population from customized shapefile")), 
-                         tags$li(em("Explore population distribution over Iraq"))
+                         tags$li(em("Explore population distribution over Ukraine"))
                        )),
                        
                        
@@ -196,16 +225,26 @@ ui <-
                        hr(),
                        
                        h4(strong("Data Source:"),tags$br(),
-                          p("Admin Boundaries:", em(tags$a(href="https://data.humdata.org/dataset/iraq-admin-level-1-boundaries", "OCHA")),tags$br(),
-                            "Population:" , em(tags$a(href="https://www.worldpop.org/geodata/summary?id=49994", "WorldPop,2020")))
+                          p("Admin Boundaries:", em(tags$a(href="https://data.humdata.org/dataset/cod-ab-ukr", "OCHA")),tags$br(),
+                            "Population:" , em(tags$a(href="https://data.humdata.org/dataset/worldpop-population-counts-for-ukraine", "WorldPop,2020")))
                        ),
                        
                        hr(),
                        h4(strong("Contact:"),tags$br(),
+                          p("Abraham Azar",br(),
+                            "Data Specialist",br(),
+                            "Email:", tags$a(href="mailto:abraham.azar@impact-initiatives.org","abraham.azar@impact-initiatives.org"))
+                       ),
+                       p("Bruna Rutynar",br(),
+                         "GIS Officer",br(),
+                         "Email:", tags$a(href="mailto:bruna.rutyna@reach-initiative.org","bruna.rutyna@reach-initiative.org")),
+                       hr(),
+                       h4(strong("Credits:"),tags$br(),
                           p("Md. Mehedi Hasan Khan",br(),
-                          "GIS Specialist",br(),
-                          "Email:", tags$a(href="mailto:mh.khan@reach-initiative.org","mh.khan@reach-initiative.org"))
-                       )
+                            "GIS Specialist"),
+                       ),
+                       
+                       
                        
                ),
                
@@ -364,7 +403,7 @@ server <- function(input, output,session){
   
   governorate_names <- reactive({input$select_governarate})
   
-  customized_cluster_filter <- reactive({customized_cluster %>% 
+  customized_cluster_filter <- reactive({customized_cluster %>%
       filter(ADM1_EN %in% governorate_names())})
   
   ####################### available district name in the selected governorate ############
@@ -379,7 +418,7 @@ server <- function(input, output,session){
   ########################################## filter district #####################################
   
   district_names <- reactive({input$select_district})
-  customized_cluster_filter_district <- reactive({customized_cluster_filter() %>% 
+  customized_cluster_filter_district <- reactive({customized_cluster_filter()%>%
       filter(ADM2_EN %in% district_names())})
   
   

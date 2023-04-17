@@ -17,3 +17,4 @@
 !/01_input/03_admin_boundary_with_pop/.gitkeep
 !/01_input/04_admin_boundary_without_pop/.gitkeep
 !/01_input/05_cluster/.gitkeep
+packrat/lib*/
